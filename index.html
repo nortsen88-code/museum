@@ -551,7 +551,7 @@ const EXHIBITS = [
     medium: "Drawing",
     date: "",
     caption: "A green figure and a pink figure, hand in hand, with two hearts above them.",
-    description: "A hand-drawn picture of two figures sleeping together, hands joined, with hearts floating between them.",
+    description: "A hand-drawn picture of two figures walking together, hands joined, with hearts floating between them.",
     personalNote: ""
   },
   {
@@ -1206,6 +1206,10 @@ function hallGuide(items) {
   if (gr) rows.push(h("li", { class: "hg__x" }, h("a", { class: "hg__b", href: "#gramophone" }, h("small", { text: gr.numeral + " · Listening" }), h("span", { text: gr.title }))));
   return h("nav", { class: "hg", "aria-label": "Hall guide" }, h("div", { class: "hg__box" }, h("p", { class: "cap-s", text: "Hall guide" }), h("h3", { text: "One work from every gallery" }), h("ol", {}, rows)));
 }
+
+/* Music pauses when the page leaves the screen (app switch, minimise, screen lock, closing). It does not resume by itself. */
+document.addEventListener("visibilitychange", () => { if (document.hidden) gramPause(); });
+addEventListener("pagehide", gramPause);
 
 
 ROOMS.forEach((r,i)=>{const s=r.id==="entrance"?entrance():build(r,i);roomEls[r.id]=s;app.append(s)});
