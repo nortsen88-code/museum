@@ -1262,13 +1262,257 @@ function gramLabel() {
   const i = vInfo(t); el.style.fill = i.lab; const ini = g.root.querySelector("#grLabIni"); if (ini) ini.textContent = i.ini;
 }
 
+/* ---- the antique gramophone: engraved brass horn, carved walnut cabinet, shellac record, tonearm and crank ---- */
+function gpBuild() {
+  const f = n => (Math.round(n * 10) / 10).toString();
+  const P = (x, y) => f(x) + " " + f(y);
+  const bez = (p0, p1, p2, p3, t) => { const u = 1 - t; return [u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0], u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]]; };
+  const dbez = (p0, p1, p2, p3, t) => { const u = 1 - t; return [3*u*u*(p1[0]-p0[0]) + 6*u*t*(p2[0]-p1[0]) + 3*t*t*(p3[0]-p2[0]), 3*u*u*(p1[1]-p0[1]) + 6*u*t*(p2[1]-p1[1]) + 3*t*t*(p3[1]-p2[1])]; };
+  const norm = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0]/l, v[1]/l]; };
+  const lerpC = (stops, t) => { for (let i = 1; i < stops.length; i++) if (t <= stops[i][0]) { const a = stops[i-1], b = stops[i], k = (t - a[0]) / (b[0] - a[0] || 1); return "rgb(" + [1,2,3].map(j => Math.round(a[j] + (b[j] - a[j]) * k)).join(",") + ")"; } const l = stops[stops.length-1]; return "rgb(" + l[1] + "," + l[2] + "," + l[3] + ")"; };
+
+  /* ===== HORN GEOMETRY ===== */
+  const E = [430, 352];                                   /* swivel elbow above the record */
+  const T0 = [414, 262], Bc = [205, 66];                  /* throat, bell centre */
+  const nk = [E, [441, 322], [433, 292], T0];             /* neck */
+  const hn = [T0, [376, 203], [277, 135], Bc];            /* flared horn */
+  const A = 112, Bm = 50, R0 = 10;
+  const rH = t => R0 + (A - R0) * Math.pow(t, 2.5);
+  const NS = 70;
+  let hp = [], hr = [], ht = [], hnrm = [];
+  for (let i = 0; i <= NS; i++) { const t = i / NS; hp.push(bez(...hn, t)); ht.push(norm(dbez(...hn, t))); hr.push(rH(t)); }
+  hnrm = ht.map(v => [-v[1], v[0]]);
+  const pt = (t, s) => { const x = t * NS, i = Math.min(NS - 1, Math.floor(x)), k = x - i; const p = [hp[i][0] + (hp[i+1][0]-hp[i][0])*k, hp[i][1] + (hp[i+1][1]-hp[i][1])*k]; const tt = norm([ht[i][0]+(ht[i+1][0]-ht[i][0])*k, ht[i][1]+(ht[i+1][1]-ht[i][1])*k]); const n = [-tt[1], tt[0]]; const r = rH(t); return { p, t: tt, n, r, x: p[0] + n[0]*r*s, y: p[1] + n[1]*r*s }; };
+  const tauE = ht[NS], nE = hnrm[NS];
+  /* scalloped, slightly asymmetric bell lip */
+  const rho = ph => 1 + .05 * Math.cos(8 * ph + .4) + .022 * Math.cos(3 * ph + 1.1) + .012 * Math.cos(13 * ph);
+  const rim = (sc, cx, cy) => { let d = ""; for (let i = 0; i <= 120; i++) { const ph = i / 120 * Math.PI * 2, r = rho(ph); const x = cx + sc * (A * r * Math.cos(ph) * nE[0] + Bm * r * Math.sin(ph) * tauE[0]); const y = cy + sc * (A * r * Math.cos(ph) * nE[1] + Bm * r * Math.sin(ph) * tauE[1]); d += (i ? "L" : "M") + P(x, y); } return d + "Z"; };
+  const rimPt = (sc, cx, cy, ph) => { const r = rho(ph); return [cx + sc * (A * r * Math.cos(ph) * nE[0] + Bm * r * Math.sin(ph) * tauE[0]), cy + sc * (A * r * Math.cos(ph) * nE[1] + Bm * r * Math.sin(ph) * tauE[1])]; };
+  const Fc = [Bc[0] - tauE[0] * 44, Bc[1] - tauE[1] * 44];       /* the throat seen down inside the bell */
+  const ringC = s => [Fc[0] + (Bc[0] - Fc[0]) * s, Fc[1] + (Bc[1] - Fc[1]) * s];
+
+  /* exterior body outline */
+  let bodyL = "", bodyR = "";
+  for (let i = 0; i <= NS; i++) { bodyL += (i ? "L" : "M") + P(hp[i][0] + hnrm[i][0]*hr[i], hp[i][1] + hnrm[i][1]*hr[i]); }
+  for (let i = NS; i >= 0; i--) bodyR += "L" + P(hp[i][0] - hnrm[i][0]*hr[i], hp[i][1] - hnrm[i][1]*hr[i]);
+  const body = bodyL + bodyR + "Z";
+  const strip = (s1, s2, t0, t1) => { let d = "", e = ""; const n = 40; for (let i = 0; i <= n; i++) { const q = pt(t0 + (t1 - t0) * i / n, s1); d += (i ? "L" : "M") + P(q.x, q.y); } for (let i = n; i >= 0; i--) { const q = pt(t0 + (t1 - t0) * i / n, s2); e += "L" + P(q.x, q.y); } return d + e + "Z"; };
+  const line = (s, t0, t1) => { let d = ""; const n = 40; for (let i = 0; i <= n; i++) { const q = pt(t0 + (t1 - t0) * i / n, s); d += (i ? "L" : "M") + P(q.x, q.y); } return d; };
+  const ringArc = (t, k) => { const q = pt(t, 0); let d = ""; for (let i = 0; i <= 24; i++) { const th = Math.PI * i / 24; const x = q.p[0] + q.r * (Math.cos(th) * q.n[0] - k * Math.sin(th) * q.t[0]); const y = q.p[1] + q.r * (Math.cos(th) * q.n[1] - k * Math.sin(th) * q.t[1]); d += (i ? "L" : "M") + P(x, y); } return d; };
+
+  /* engraving motifs, drawn in a 20-unit space */
+  const defs = `
+<linearGradient id="gpHorn" gradientUnits="userSpaceOnUse" x1="${f(Bc[0] + nE[0]*A)}" y1="${f(Bc[1] + nE[1]*A)}" x2="${f(Bc[0] - nE[0]*A)}" y2="${f(Bc[1] - nE[1]*A)}"><stop offset="0" stop-color="#8a6414"/><stop offset=".16" stop-color="#d9b34f"/><stop offset=".34" stop-color="#f6e5a0"/><stop offset=".5" stop-color="#e2bf5f"/><stop offset=".75" stop-color="#b58a2b"/><stop offset="1" stop-color="#5d4010"/></linearGradient>
+<linearGradient id="gpNeck" gradientUnits="userSpaceOnUse" x1="410" y1="0" x2="452" y2="0"><stop offset="0" stop-color="#6a4a12"/><stop offset=".22" stop-color="#d9b34f"/><stop offset=".4" stop-color="#fff0b0"/><stop offset=".62" stop-color="#c79a35"/><stop offset="1" stop-color="#4e360d"/></linearGradient>
+<linearGradient id="gpWoodL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a24d26"/><stop offset=".5" stop-color="#7c3416"/><stop offset="1" stop-color="#52210d"/></linearGradient>
+<linearGradient id="gpWoodR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7d3617"/><stop offset=".5" stop-color="#5a250f"/><stop offset="1" stop-color="#37150a"/></linearGradient>
+<linearGradient id="gpTop" gradientUnits="userSpaceOnUse" x1="150" y1="360" x2="470" y2="450"><stop offset="0" stop-color="#b3592b"/><stop offset=".5" stop-color="#8f4020"/><stop offset="1" stop-color="#6d2c14"/></linearGradient>
+<linearGradient id="gpSheen" gradientUnits="userSpaceOnUse" x1="170" y1="350" x2="300" y2="470"><stop offset="0" stop-color="#ffd9a0" stop-opacity="0"/><stop offset=".45" stop-color="#ffd9a0" stop-opacity=".34"/><stop offset=".6" stop-color="#ffd9a0" stop-opacity="0"/></linearGradient>
+<linearGradient id="gpBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a3c1a"/><stop offset="1" stop-color="#40180a"/></linearGradient>
+<radialGradient id="gpPlat" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#d8d4c6"/><stop offset=".6" stop-color="#8d8a80"/><stop offset="1" stop-color="#45433e"/></radialGradient>
+<linearGradient id="gpSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#cfd2d2"/><stop offset=".75" stop-color="#7d8383"/><stop offset="1" stop-color="#d7dada"/></linearGradient>
+<linearGradient id="gpGrip" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4a4c"/><stop offset=".35" stop-color="#1c1c1e"/><stop offset="1" stop-color="#050505"/></linearGradient>
+<clipPath id="gpBellClip"><path d="${rim(1, Bc[0], Bc[1])}"/></clipPath>
+<clipPath id="gpBodyClip"><path d="${body}"/></clipPath>
+<g id="gpFl"><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z"/><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z" transform="rotate(60)"/><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z" transform="rotate(120)"/><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z" transform="rotate(180)"/><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z" transform="rotate(240)"/><path d="M0 -9C3 -9 4.5 -5 0 -1.5C-4.5 -5 -3 -9 0 -9Z" transform="rotate(300)"/><circle r="1.6"/><path d="M-9 8C-4 4 4 4 9 8M-8 11C-3 8 3 8 8 11"/></g>
+<g id="gpLf"><path d="M0 0C3 -6 10 -7 17 -3C11 1 5 3 0 0Z"/><path d="M1 -.5C6 -2.5 11 -3 15 -3"/></g>`;
+
+  let horn = "";
+  /* ---- exterior ---- */
+  horn += `<path d="${body}" fill="url(#gpHorn)"/>`;
+  horn += `<g clip-path="url(#gpBodyClip)">`;
+  horn += `<path d="${strip(.62, 1.05, 0, 1)}" fill="#2a1a04" fill-opacity=".34"/>`;
+  horn += `<path d="${strip(.2, .46, .08, 1)}" fill="#fff6cf" fill-opacity=".42"/>`;
+  horn += `<path d="${strip(.27, .36, .15, 1)}" fill="#fff" fill-opacity=".38"/>`;
+  horn += `<path d="${strip(-.95, -.7, .1, 1)}" fill="#ffd978" fill-opacity=".32"/>`;
+  /* seams and joints */
+  [-.75, -.25, .25, .75].forEach(s => { horn += `<path d="${line(s, .18, 1)}" fill="none" stroke="#3c280a" stroke-opacity=".55" stroke-width="1.5"/><path d="${line(s + .03, .18, 1)}" fill="none" stroke="#fff3c4" stroke-opacity=".4" stroke-width=".9"/>`; });
+  [.4, .58, .73, .86].forEach((t, i) => { horn += `<path d="${ringArc(t, .45)}" fill="none" stroke="#3c280a" stroke-opacity=".6" stroke-width="${f(1.4 + i*.3)}"/><path d="${ringArc(t + .006, .45)}" fill="none" stroke="#fff3c4" stroke-opacity=".45" stroke-width="1"/>`; });
+  /* floral engraving */
+  for (let t = .43; t < .97; t += (.8 * rH(t)) / 380) {
+    [-.5, 0, .5].forEach((s, j) => {
+      const q = pt(t, s), sz = q.r * .36, ang = Math.atan2(q.t[1], q.t[0]) * 180 / Math.PI + 90 + (j - 1) * 14, sc = sz / 10, sw = f(1.1 / sc);
+      horn += `<g transform="translate(${P(q.x, q.y)}) rotate(${f(ang)}) scale(${f(sc)} ${f(sc * .86)})"><use href="#gpFl" fill="#5a3b0a" fill-opacity=".34" stroke="#3e2806" stroke-opacity=".75" stroke-width="${sw}"/><use href="#gpFl" transform="translate(-.6 -.7)" fill="none" stroke="#fff4c8" stroke-opacity=".6" stroke-width="${f(.7 / sc)}"/></g>`;
+      [[-1, 12], [1, 12]].forEach(([sg, d]) => { horn += `<g transform="translate(${P(q.x, q.y)}) rotate(${f(ang + sg * 62)}) translate(${f(d*sc*.9)} 0) scale(${f(sc*.55)})"><use href="#gpLf" fill="#5a3b0a" fill-opacity=".3" stroke="#3e2806" stroke-opacity=".6" stroke-width="${f(1 / (sc*.55))}"/></g>`; });
+    });
+  }
+  horn += `</g>`;
+  /* ---- the mouth: funnel of rings seen from inside ---- */
+  const cols = [[0, 30, 18, 4], [.1, 93, 63, 15], [.3, 157, 116, 33], [.55, 214, 176, 77], [.8, 236, 208, 124], [1, 246, 229, 162]];
+  horn += `<path d="${rim(1, Bc[0] + 3, Bc[1] + 4)}" fill="#4a3208"/>`;
+  horn += `<path d="${rim(1, Bc[0], Bc[1])}" fill="${lerpC(cols, 1)}"/>`;
+  horn += `<g clip-path="url(#gpBellClip)">`;
+  const NR = 18;
+  for (let i = 0; i < NR; i++) { const s = 1 - (i / NR) * .96, c = ringC(s); horn += `<path d="${rim(s, c[0], c[1])}" fill="${lerpC(cols, Math.pow(s, .75))}"/>`; }
+  /* ring bands */
+  [.9, .72, .56, .42, .3].forEach((s, i) => { const c = ringC(s); horn += `<path d="${rim(s, c[0], c[1])}" fill="none" stroke="#3c280a" stroke-opacity="${f(.5 - i*.04)}" stroke-width="1.5"/><path d="${rim(s * .985, c[0] + 1, c[1] + 1.4)}" fill="none" stroke="#fff3c4" stroke-opacity=".38" stroke-width=".9"/>`; });
+  /* radial seams */
+  for (let k = 0; k < 10; k++) { const ph = k / 10 * Math.PI * 2 + .2, a = rimPt(.1, ...ringC(.1), ph), b = rimPt(1, Bc[0], Bc[1], ph); horn += `<path d="M${P(...a)}L${P(...b)}" stroke="#3c280a" stroke-opacity=".5" stroke-width="1.4"/><path d="M${P(a[0] + 1, a[1] + 1)}L${P(b[0] + 1, b[1] + 1)}" stroke="#fff3c4" stroke-opacity=".35" stroke-width=".9"/>`; }
+  /* interior florals */
+  [.82, .6, .42].forEach((s, row) => { const c = ringC(s); for (let k = 0; k < 10; k++) { const ph = (k + .5) / 10 * Math.PI * 2 + .2, q = rimPt(s, c[0], c[1], ph), ang = Math.atan2(q[1] - c[1], q[0] - c[0]) * 180 / Math.PI + 90, sc = (.9 + s * 1.5) * .5 * (1 - row * .1); horn += `<g transform="translate(${P(...q)}) rotate(${f(ang)}) scale(${f(sc)} ${f(sc * .8)})"><use href="#gpFl" fill="#5a3b0a" fill-opacity=".3" stroke="#3e2806" stroke-opacity=".7" stroke-width="${f(1 / sc)}"/><use href="#gpFl" transform="translate(-.6 -.7)" fill="none" stroke="#fff4c8" stroke-opacity=".55" stroke-width="${f(.7 / sc)}"/></g>`; } });
+  horn += `<path d="${rim(.1, ...ringC(.1))}" fill="#150b02" fill-opacity=".8"/>`;
+  horn += `<path d="${rim(1, Bc[0], Bc[1])}" fill="none" stroke="#2a1a04" stroke-opacity=".45" stroke-width="9"/>`;
+  horn += `</g>`;
+  horn += `<path d="${rim(1, Bc[0], Bc[1])}" fill="none" stroke="#4a3208" stroke-width="6.5" stroke-linejoin="round"/>`;
+  horn += `<path d="${rim(1, Bc[0], Bc[1])}" fill="none" stroke="url(#gpHorn)" stroke-width="4.6" stroke-linejoin="round"/>`;
+  horn += `<path d="${rim(.992, Bc[0] - .8, Bc[1] - 1)}" fill="none" stroke="#fffbe0" stroke-opacity=".7" stroke-width="1.2" stroke-linejoin="round"/>`;
+
+  /* ---- neck ---- */
+  let neck = "", nl = "", nr = "";
+  const NN = 20, nrad = t => 8.2 + 1.2 * t;
+  for (let i = 0; i <= NN; i++) { const t = i / NN, p = bez(...nk, t), tg = norm(dbez(...nk, t)), n = [-tg[1], tg[0]]; nl += (i ? "L" : "M") + P(p[0] + n[0]*nrad(t), p[1] + n[1]*nrad(t)); }
+  for (let i = NN; i >= 0; i--) { const t = i / NN, p = bez(...nk, t), tg = norm(dbez(...nk, t)), n = [-tg[1], tg[0]]; nr += "L" + P(p[0] - n[0]*nrad(t), p[1] - n[1]*nrad(t)); }
+  neck += `<path d="${nl}${nr}Z" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".8"/>`;
+  [.3, .62, .92].forEach(t => { const p = bez(...nk, t), tg = norm(dbez(...nk, t)), n = [-tg[1], tg[0]], r = nrad(t) + 2.2, ang = Math.atan2(tg[1], tg[0]) * 180 / Math.PI; neck += `<g transform="translate(${P(...p)}) rotate(${f(ang)})"><rect x="-2.6" y="${f(-r)}" width="5.2" height="${f(r * 2)}" rx="1.6" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".7"/><rect x="-1.4" y="${f(-r + 1)}" width="1.2" height="${f(r * 2 - 2)}" fill="#fff" fill-opacity=".5"/></g>`; });
+  /* neck engraving */
+  [.45, .78].forEach(t => { const p = bez(...nk, t), tg = norm(dbez(...nk, t)), ang = Math.atan2(tg[1], tg[0]) * 180 / Math.PI + 90; neck += `<g transform="translate(${P(...p)}) rotate(${f(ang)}) scale(.38)"><use href="#gpFl" fill="#5a3b0a" fill-opacity=".35" stroke="#3e2806" stroke-width="2"/></g>`; });
+  /* transition collar between neck and horn throat */
+  neck += `<g transform="translate(${P(...T0)}) rotate(${f(Math.atan2(ht[0][1], ht[0][0]) * 180 / Math.PI)})"><rect x="-3.5" y="-13" width="7" height="26" rx="2.5" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".8"/><rect x="-2" y="-12" width="1.5" height="24" fill="#fff" fill-opacity=".55"/></g>`;
+
+  /* ===== CABINET ===== */
+  const Cx = 310, Cy = 402.5;
+  const top = { B: [315, 347], R: [480, 402], F: [305, 458], L: [140, 404] };
+  const sc = (c, s, dy) => [Cx + (c[0] - Cx) * s, Cy + (c[1] - Cy) * s + dy];
+  const body_ = { L: sc(top.L, .96, 10), F: sc(top.F, .96, 10), R: sc(top.R, .96, 10), B: sc(top.B, .96, 10) };
+  const BH = 62;                                              /* body height */
+  const pl = { L: sc(top.L, 1.06, 72), F: sc(top.F, 1.06, 72), R: sc(top.R, 1.06, 72), B: sc(top.B, 1.06, 72) };
+  const PH = 22;
+  const quad = (a, b, c, d) => `M${P(...a)}L${P(...b)}L${P(...c)}L${P(...d)}Z`;
+  const dn = (p, h) => [p[0], p[1] + h];
+  /* affine map for a flat face of 200 x BH units */
+  const faceM = (o, e) => { const a = (e[0] - o[0]) / 200, b = (e[1] - o[1]) / 200; return `matrix(${a.toFixed(4)} ${b.toFixed(4)} 0 1 ${f(o[0])} ${f(o[1])})`; };
+
+  /* carved relief: scrolling vines in a 200 x 62 face */
+  const vine = (x0, x1, ym, amp, ph, hasPlaque) => {
+    let s = "", lf = "", fl = "", d = ""; const n = 36;
+    for (let i = 0; i <= n; i++) { const x = x0 + (x1 - x0) * i / n, y = ym + Math.sin(i / n * Math.PI * 3 + ph) * amp; d += (i ? "L" : "M") + P(x, y); }
+    s += `<path d="${d}" fill="none" stroke="#1d0903" stroke-width="3.4" stroke-linecap="round" transform="translate(.8 1)" stroke-opacity=".7"/><path d="${d}" fill="none" stroke="#c4753b" stroke-width="2.4" stroke-linecap="round"/><path d="${d}" fill="none" stroke="#f0a96a" stroke-width=".8" stroke-linecap="round" transform="translate(-.4 -.6)" stroke-opacity=".8"/>`;
+    for (let i = 1; i < 12; i++) { const k = i / 12, x = x0 + (x1 - x0) * k, y = ym + Math.sin(k * Math.PI * 3 + ph) * amp, up = i % 2 ? -1 : 1, rot = up * -55 + (x1 > x0 ? 0 : 180); lf += `<g transform="translate(${P(x, y)}) rotate(${f(up * -50)}) scale(${up < 0 ? 1 : 1} ${up}) scale(.8)"><use href="#gpLf" fill="#1d0903" fill-opacity=".6" transform="translate(.9 1)"/><use href="#gpLf" fill="#b8682f" stroke="#2a0e05" stroke-width=".5"/><use href="#gpLf" fill="none" stroke="#f3b078" stroke-width=".5" transform="translate(-.3 -.4)"/></g>`; if (i % 3 === 0) fl += `<g transform="translate(${P(x, y + up * -7)}) scale(.62)"><use href="#gpFl" fill="#1d0903" fill-opacity=".55" transform="translate(1 1.2)"/><use href="#gpFl" fill="#c4753b" stroke="#2a0e05" stroke-width=".7"/><use href="#gpFl" fill="none" stroke="#f3b078" stroke-width=".6" transform="translate(-.4 -.5)"/></g>`; }
+    return s + lf + fl;
+  };
+  const faceArt = (isLeft) => {
+    let g = `<rect x="0" y="0" width="200" height="${BH}" fill="${isLeft ? "url(#gpWoodL)" : "url(#gpWoodR)"}"/>`;
+    for (let i = 0; i < 22; i++) { const y = 3 + i * 2.8; g += `<path d="M0 ${f(y)}C50 ${f(y + 2.5 * Math.sin(i))} 120 ${f(y - 2.2 * Math.cos(i * 1.3))} 200 ${f(y + 1.6)}" fill="none" stroke="${i % 3 ? "#2a0c04" : "#d98a55"}" stroke-opacity="${i % 3 ? .18 : .1}" stroke-width=".7"/>`; }
+    g += `<rect x="1" y="1" width="198" height="${BH - 2}" fill="none" stroke="#e9a066" stroke-opacity=".35" stroke-width="1.4"/>`;
+    g += `<rect x="9" y="7" width="182" height="${BH - 14}" rx="1.5" fill="#2a0e05" fill-opacity=".72"/><rect x="9" y="7" width="182" height="${BH - 14}" rx="1.5" fill="none" stroke="#000" stroke-opacity=".55" stroke-width="1.6"/><rect x="10.5" y="8.5" width="182" height="${BH - 14}" rx="1.5" fill="none" stroke="#f1a867" stroke-opacity=".28" stroke-width=".9"/>`;
+    if (isLeft) {
+      g += vine(14, 76, 31, 9, 0.4) + vine(186, 124, 31, 9, 2.6) + vine(14, 76, 31, 5, 3.3);
+      g += `<ellipse cx="100" cy="31" rx="27" ry="19" fill="#1d0903" fill-opacity=".5" transform="translate(1 1.4)"/><ellipse cx="100" cy="31" rx="27" ry="19" fill="#8a5a1c" stroke="#2a0e05" stroke-width="1"/><ellipse cx="100" cy="31" rx="24" ry="16.5" fill="url(#grBs)" stroke="#5d4718" stroke-width=".8"/><ellipse cx="100" cy="31" rx="21" ry="13.6" fill="#1f130a"/><ellipse cx="100" cy="31" rx="21" ry="13.6" fill="none" stroke="#e6cf8f" stroke-width=".7"/>`;
+      g += `<text x="100" y="29.6" text-anchor="middle" font-size="7" font-weight="700" letter-spacing="1.6" fill="#e6cf8f" font-family="Cormorant Garamond,Iowan Old Style,Georgia,serif">HALCYON</text><path d="M80 33.6Q100 39 120 33.6" fill="none" stroke="#e6cf8f" stroke-width=".6"/><text x="100" y="37.8" text-anchor="middle" font-size="3.8" letter-spacing="1.4" fill="#e6cf8f" font-family="Cormorant Garamond,Georgia,serif">GRAMOPHONE CO.</text>`;
+    } else {
+      g += vine(14, 100, 31, 10, 0.2) + vine(186, 100, 31, 10, 2.9);
+      g += `<g transform="translate(100 31) scale(1.5)"><use href="#gpFl" fill="#1d0903" fill-opacity=".55" transform="translate(1 1.2)"/><use href="#gpFl" fill="#c4753b" stroke="#2a0e05" stroke-width=".6"/><use href="#gpFl" fill="none" stroke="#f3b078" stroke-width=".5" transform="translate(-.3 -.4)"/></g>`;
+    }
+    return g;
+  };
+
+  let cab = "";
+  /* ground shadow */
+  const shp = (c, k) => [310 + (c[0] - 310) * k, 496.5 + (c[1] - 496.5) * k];
+  const sh0 = ["L","F","R","B"].map(k => shp(dn(pl[k], PH), 1.07));
+  cab += `<path d="${quad(...sh0)}" fill="#000" opacity=".4" transform="translate(4 4)"/><path d="${quad(...["L","F","R","B"].map(k => dn(pl[k], PH)))}" fill="#000" opacity=".35"/>`;
+  /* plinth */
+  cab += `<path d="${quad(pl.L, pl.F, dn(pl.F, PH), dn(pl.L, PH))}" fill="url(#gpBase)"/>`;
+  cab += `<path d="${quad(pl.F, pl.R, dn(pl.R, PH), dn(pl.F, PH))}" fill="url(#gpBase)"/><path d="${quad(pl.F, pl.R, dn(pl.R, PH), dn(pl.F, PH))}" fill="#000" fill-opacity=".28"/>`;
+  /* carved border on plinth */
+  [[pl.L, pl.F, 0], [pl.F, pl.R, 1]].forEach(([a, b, dark]) => { const m = `matrix(${((b[0]-a[0])/100).toFixed(4)} ${((b[1]-a[1])/100).toFixed(4)} 0 1 ${f(a[0])} ${f(a[1])})`; let sp = ""; for (let i = 0; i < 25; i++) sp += `<path d="M${f(i*4 + 1)} ${PH - 4}C${f(i*4 + 1)} 5 ${f(i*4 + 4)} 5 ${f(i*4 + 4)} ${PH - 4}" fill="none" stroke="#e9a066" stroke-opacity="${dark ? .3 : .45}" stroke-width=".8"/><circle cx="${f(i*4 + 2.5)}" cy="${PH/2 + 1}" r="1" fill="#e9a066" fill-opacity="${dark ? .3 : .45}"/>`; cab += `<g transform="${m}">${sp}<rect x="0" y="1.5" width="100" height="${PH - 3}" fill="none" stroke="#000" stroke-opacity=".4"/><rect x="0" y="0" width="100" height="2" fill="#f0a96a" fill-opacity="${dark ? .25 : .5}"/></g>`; });
+  cab += `<path d="${quad(pl.L, pl.F, pl.R, pl.B)}" fill="#7d3516"/><path d="${quad(pl.L, pl.F, pl.R, pl.B)}" fill="none" stroke="#f0a96a" stroke-opacity=".4"/>`;
+  /* body faces */
+  const lM = faceM(body_.L, body_.F), rM = faceM(body_.F, body_.R);
+  cab += `<g transform="${lM}">${faceArt(true)}</g>`;
+  cab += `<g transform="${rM}">${faceArt(false)}</g>`;
+  cab += `<path d="${quad(body_.L, body_.F, dn(body_.F, BH), dn(body_.L, BH))}" fill="url(#grSh)" opacity=".5"/>`;
+  cab += `<path d="${quad(body_.F, body_.R, dn(body_.R, BH), dn(body_.F, BH))}" fill="#000" fill-opacity=".22"/>`;
+  /* corner posts */
+  const post = (a, w, h) => `<rect x="${f(a[0] - w/2)}" y="${f(a[1])}" width="${w}" height="${h}" fill="url(#gpWoodL)"/><rect x="${f(a[0] - w/2)}" y="${f(a[1])}" width="${w}" height="${h}" fill="none" stroke="#000" stroke-opacity=".4"/><rect x="${f(a[0] - w/2 + 1.2)}" y="${f(a[1])}" width="2" height="${h}" fill="#f4b27a" fill-opacity=".45"/>`;
+  cab += post(body_.F, 12, BH) + post(body_.L, 9, BH) + post(body_.R, 9, BH);
+  /* lid slab */
+  cab += `<path d="${quad(top.L, top.F, dn(top.F, 10), dn(top.L, 10))}" fill="#7e3516"/><path d="${quad(top.L, top.F, dn(top.F, 10), dn(top.L, 10))}" fill="url(#grSh)" opacity=".4"/>`;
+  cab += `<path d="${quad(top.F, top.R, dn(top.R, 10), dn(top.F, 10))}" fill="#53200d"/>`;
+  cab += `<path d="M${P(...top.L)}L${P(...top.F)}L${P(...top.R)}" fill="none" stroke="#f8c48a" stroke-opacity=".6" stroke-width="1.3"/><path d="M${P(top.L[0], top.L[1] + 10)}L${P(top.F[0], top.F[1] + 10)}L${P(top.R[0], top.R[1] + 10)}" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="1.5"/>`;
+  /* lid top */
+  cab += `<path d="${quad(top.L, top.F, top.R, top.B)}" fill="url(#gpTop)"/>`;
+  for (let i = 0; i < 26; i++) { const k = i / 26, a = [top.L[0] + (top.B[0] - top.L[0]) * k, top.L[1] + (top.B[1] - top.L[1]) * k], b = [top.F[0] + (top.R[0] - top.F[0]) * k, top.F[1] + (top.R[1] - top.F[1]) * k]; cab += `<path d="M${P(...a)}L${P(...b)}" stroke="${i % 3 ? "#3a1306" : "#e08e58"}" stroke-opacity="${i % 3 ? .13 : .1}" stroke-width=".8"/>`; }
+  const ins = sc(top.L, .93, 0), insF = sc(top.F, .93, 0), insR = sc(top.R, .93, 0), insB = sc(top.B, .93, 0);
+  cab += `<path d="${quad(ins, insF, insR, insB)}" fill="none" stroke="#2a0c04" stroke-opacity=".55" stroke-width="1.4"/><path d="${quad(sc(top.L, .925, 1), sc(top.F, .925, 1), sc(top.R, .925, 1), sc(top.B, .925, 1))}" fill="none" stroke="#f3b078" stroke-opacity=".3" stroke-width=".8"/>`;
+  cab += `<path d="${quad(top.L, top.F, top.R, top.B)}" fill="url(#gpSheen)"/>`;
+  /* brake lever plate, front right of the lid */
+  cab += `<g transform="translate(372 441) rotate(-17)"><rect x="-16" y="-3.4" width="32" height="7" rx="3" fill="#000" fill-opacity=".4" transform="translate(1.5 2)"/><rect x="-16" y="-3.4" width="32" height="7" rx="3" fill="url(#gpSteel)" stroke="#555" stroke-width=".6"/><circle cx="-10" cy="0" r="1.3" fill="#444"/><circle cx="10" cy="0" r="1.3" fill="#444"/></g>`;
+
+  /* ===== PLATTER + RECORD ===== */
+  const RC = [310, 404], RR = 126, YS = .27;
+  let rec = "";
+  rec += `<ellipse cx="${RC[0] + 3}" cy="${RC[1] + 7}" rx="${RR + 9}" ry="${f((RR + 9) * YS)}" fill="#000" opacity=".4"/>`;
+  rec += `<ellipse cx="${RC[0]}" cy="${RC[1] + 4}" rx="${RR + 7}" ry="${f((RR + 7) * YS)}" fill="#2e2c28"/><ellipse cx="${RC[0]}" cy="${RC[1]}" rx="${RR + 7}" ry="${f((RR + 7) * YS)}" fill="url(#gpPlat)" stroke="#2c2a26" stroke-width="1"/><ellipse cx="${RC[0] - 1}" cy="${RC[1] - 1}" rx="${RR + 5}" ry="${f((RR + 5) * YS)}" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1"/>`;
+  rec += `<ellipse cx="${RC[0]}" cy="${RC[1] + 2.6}" rx="${RR}" ry="${f(RR * YS)}" fill="#050505"/>`;
+  let gr = ""; for (let r = 46; r <= RR - 2; r += 4) gr += `<circle r="${r}" fill="none" stroke="${r % 12 < 4 ? "#3a3632" : "#26231f"}" stroke-width="${r % 12 < 4 ? .8 : .6}" vector-effect="non-scaling-stroke"/>`;
+  rec += `<g transform="translate(${RC[0]} ${RC[1]}) scale(1 ${YS})"><g class="spin">
+<circle r="${RR}" fill="#100e0c"/>${gr}
+<circle r="${RR - 1}" fill="none" stroke="#4d4741" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+<path d="M0 0L${f(RR * .965)} ${f(RR * .26)}A${RR} ${RR} 0 0 1 ${f(RR * .73)} ${f(RR * .68)}Z" fill="#ffe9b8" fill-opacity=".1"/>
+<path d="M0 0L${f(-RR * .965)} ${f(-RR * .26)}A${RR} ${RR} 0 0 1 ${f(-RR * .73)} ${f(-RR * .68)}Z" fill="#ffe9b8" fill-opacity=".1"/>
+<circle id="grLab" r="40" style="fill:#a33a2a"/><circle r="40" fill="url(#grBs)" opacity=".16"/>
+<circle r="35" fill="none" stroke="#f1e9d7" stroke-opacity=".75" stroke-width="1.1" vector-effect="non-scaling-stroke"/><circle r="22" fill="none" stroke="#f1e9d7" stroke-opacity=".45" stroke-width=".9" vector-effect="non-scaling-stroke"/>
+<text x="0" y="-24" text-anchor="middle" font-size="6.2" letter-spacing="1.6" fill="#f1e9d7" fill-opacity=".9" font-family="Cormorant Garamond,Georgia,serif">HALCYON</text>
+<text id="grLabIni" x="0" y="8" text-anchor="middle" font-size="19" font-weight="700" fill="#f1e9d7" fill-opacity=".92" font-family="Cormorant Garamond,Iowan Old Style,Georgia,serif">H</text>
+<circle cx="19" cy="0" r="2.4" fill="#f1e9d7" fill-opacity=".8"/><circle r="3.6" fill="#d8d4c6"/>
+</g></g>`;
+  rec += `<path d="M${f(RC[0] - RR * .92)} ${f(RC[1] - 5)}A${RR} ${f(RR * YS)} 0 0 1 ${f(RC[0] - RR * .2)} ${f(RC[1] - RR * YS + 1)}" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="${RC[0] - 24}" cy="${RC[1] - 8}" rx="86" ry="9" fill="#fff" fill-opacity=".045" transform="rotate(-8 ${RC[0] - 24} ${RC[1] - 8})"/>`;
+  rec += `<ellipse cx="${RC[0]}" cy="${RC[1]}" rx="5" ry="2" fill="url(#gpSteel)" stroke="#555" stroke-width=".5"/>`;
+
+  /* ===== POST + HORN ===== */
+  let mid = "";
+  mid += `<ellipse cx="434" cy="389" rx="15" ry="5" fill="#000" opacity=".4"/><ellipse cx="432" cy="386" rx="12" ry="4.2" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".8"/>`;
+  mid += `<rect x="427.5" y="352" width="9" height="35" fill="url(#gpNeck)"/><rect x="429" y="352" width="1.6" height="35" fill="#fff" fill-opacity=".6"/>`;
+  mid += horn + neck;
+
+  /* ===== TONEARM ===== */
+  let arm = `<g transform="translate(${E[0]} ${E[1]})"><g class="arm">
+<path d="M-57 33C-44 33 -30 26 -4 3" fill="none" stroke="#000" stroke-opacity=".28" stroke-width="9" stroke-linecap="round" transform="translate(3 13)"/>
+<path d="M-3 4C-24 22 -40 30 -52 31" fill="none" stroke="#4a3208" stroke-width="9.6" stroke-linecap="round"/>
+<path d="M-3 4C-24 22 -40 30 -52 31" fill="none" stroke="url(#gpNeck)" stroke-width="7.4" stroke-linecap="round"/>
+<path d="M-5 1C-24 17 -38 25 -50 27" fill="none" stroke="#fffbe0" stroke-opacity=".7" stroke-width="1.4" stroke-linecap="round"/>
+<g transform="translate(-58 34)">
+<ellipse cx="2" cy="4" rx="17" ry="17" fill="#000" fill-opacity=".25"/>
+<circle r="16.5" fill="#4a3208"/><circle r="15" fill="url(#gpSteel)" stroke="#6d7070" stroke-width=".8"/><circle r="11.4" fill="none" stroke="#5c6060" stroke-width="1"/><circle r="10.4" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".8"/><circle r="7" fill="url(#gpSteel)" stroke="#555" stroke-width=".7"/><circle r="2.6" fill="#3a3d3d"/><path d="M-1.8 0H1.8" stroke="#fff" stroke-width=".7"/>
+<circle cx="-12" cy="-2" r="1.1" fill="#444"/><circle cx="11" cy="3" r="1.1" fill="#444"/>
+<path d="M-6 -11C-8 -14 -3 -16 -1 -12" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.4" stroke-linecap="round"/>
+<path d="M-3 14L-6 23L-8 26" fill="none" stroke="#7b7b7b" stroke-width="2.6" stroke-linecap="round"/><path d="M-3.4 14.6L-6 22.4" stroke="#e6e6e6" stroke-width=".9" stroke-linecap="round"/><path d="M-8 26L-9 28" stroke="#111" stroke-width="1.2" stroke-linecap="round"/>
+</g>
+<circle r="11.5" fill="#4a3208"/><circle r="10" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".7"/><circle r="6" fill="url(#gpSteel)" stroke="#555" stroke-width=".6"/><circle r="2.2" fill="#2a2a2a"/><path d="M-7 -4Q-2 -9 5 -7" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="1.2" stroke-linecap="round"/>
+</g></g>`;
+
+  /* ===== CRANK ===== */
+  const ax = [406, 469], ax2 = [440, 480], h1 = [446, 507], g2 = [489, 520];
+  let crank = `<path d="M${P(...ax)}L${P(...ax2)}" stroke="#000" stroke-opacity=".3" stroke-width="9" stroke-linecap="round" transform="translate(2 4)"/>
+<ellipse cx="${ax[0]}" cy="${ax[1]}" rx="8" ry="9" fill="#1c0b04"/><ellipse cx="${ax[0] + 1}" cy="${ax[1]}" rx="6.2" ry="7" fill="url(#gpNeck)" stroke="#4a3208" stroke-width=".8"/>
+<path d="M${P(...ax)}L${P(...ax2)}" stroke="#555" stroke-width="7" stroke-linecap="round"/><path d="M${P(...ax)}L${P(...ax2)}" stroke="url(#gpSteel)" stroke-width="5" stroke-linecap="round"/>
+<path d="M${P(...ax2)}L${P(...h1)}" stroke="#555" stroke-width="7" stroke-linecap="round"/><path d="M${P(...ax2)}L${P(...h1)}" stroke="url(#gpSteel)" stroke-width="5" stroke-linecap="round"/>
+<circle cx="${ax2[0]}" cy="${ax2[1]}" r="4.6" fill="url(#gpSteel)" stroke="#555" stroke-width=".7"/>
+<path d="M${P(...h1)}L${P(...g2)}" stroke="#000" stroke-opacity=".32" stroke-width="12" stroke-linecap="round" transform="translate(2 4)"/>
+<path d="M${P(...h1)}L${P(...g2)}" stroke="#050505" stroke-width="11.5" stroke-linecap="round"/>
+<path d="M${P(...h1)}L${P(...g2)}" stroke="url(#gpGrip)" stroke-width="9.6" stroke-linecap="round"/>
+<path d="M${P(h1[0] + 5, h1[1] - 3.4)}L${P(g2[0] - 2, g2[1] - 3.8)}" stroke="#fff" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round"/>
+<ellipse cx="${h1[0] + 2}" cy="${h1[1] + .5}" rx="4" ry="5.5" fill="url(#gpSteel)" stroke="#555" stroke-width=".6" transform="rotate(18 ${h1[0] + 2} ${h1[1]})"/>`;
+
+  /* ===== SOUND WAVES + NOTES ===== */
+  const tw = norm([-.9, -.43]), nw = [-tw[1], tw[0]];
+  let waves = "";
+  [0, 1, 2].forEach(k => { const d = 56 + k * 28, w = 46 + k * 11, c = [Bc[0] + tw[0] * d, Bc[1] + tw[1] * d]; waves += `<path class="wv" d="M${P(c[0] - nw[0] * w, c[1] - nw[1] * w)}Q${P(c[0] + tw[0] * 40, c[1] + tw[1] * 40)} ${P(c[0] + nw[0] * w, c[1] + nw[1] * w)}"/>`; });
+
+  return `<defs>${defs}</defs>
+<g aria-hidden="true">${cab}${rec}${mid}${arm}${crank}</g>
+<g class="waves" fill="none" stroke="#e6cf8f" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">${waves}</g>
+<g aria-hidden="true" fill="#f6e6b0" font-family="Georgia,serif" font-size="26">
+<text class="note" x="70" y="64">♪</text><text class="note" x="104" y="14">♫</text><text class="note" x="40" y="104">♪</text>
+</g>`;
+}
+
 /* ---- the listening room: wallpaper, window, lamp, console table and a freshly drawn gramophone ---- */
 const GRAM_SVG = (() => {
-  let gr = ""; for (let r = 62; r <= 146; r += 6) gr += `<circle r="${r}" fill="none" stroke="#2b2724" stroke-width="${r % 12 ? .7 : 1}" vector-effect="non-scaling-stroke"/>`;
-  let slatL = "", slatR = ""; for (let x = 108; x <= 278; x += 10) slatL += `M${x} 482V522`; for (let x = 362; x <= 532; x += 10) slatR += `M${x} 482V522`;
   let panels = ""; for (let i = 0; i < 6; i++) panels += `<rect x="${14 + i * 130}" y="546" width="112" height="128" fill="#000" fill-opacity=".14" stroke="#ffe6b0" stroke-opacity=".22"/><rect x="${20 + i * 130}" y="552" width="100" height="116" fill="none" stroke="#000" stroke-opacity=".3"/>`;
   let stars = ""; [[60,120],[96,96],[140,138],[70,196],[128,214],[54,262]].forEach(([x,y]) => stars += `<circle cx="${x}" cy="${y}" r="1.3" fill="#fff" opacity=".8"/>`);
-  return `<svg viewBox="0 -10 800 730" role="img" aria-label="A candle-lit listening room: a brass-horned gramophone on a walnut console table, a moonlit window with velvet curtains, a framed picture and a glowing floor lamp.">
+  return `<svg viewBox="0 -10 800 730" role="img" aria-label="A candle-lit listening room: an antique gramophone with an engraved brass horn and carved walnut cabinet on a console table, a moonlit window with velvet curtains, a framed picture and a glowing floor lamp.">
 <defs>
 <linearGradient id="grBr" gradientUnits="userSpaceOnUse" x1="130" y1="0" x2="510" y2="0"><stop offset="0" stop-color="#5f4719"/><stop offset=".14" stop-color="#a98a4f"/><stop offset=".3" stop-color="#e6cf8f"/><stop offset=".42" stop-color="#f6e6b0"/><stop offset=".55" stop-color="#c9a85f"/><stop offset=".78" stop-color="#8a6d2f"/><stop offset="1" stop-color="#4e3a14"/></linearGradient>
 <linearGradient id="grBs" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4e3ab"/><stop offset=".5" stop-color="#b8975a"/><stop offset="1" stop-color="#7a5f26"/></linearGradient>
@@ -1279,6 +1523,7 @@ const GRAM_SVG = (() => {
 <linearGradient id="rmSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#16213d"/><stop offset="1" stop-color="#3d5078"/></linearGradient>
 <linearGradient id="rmVel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3e1010"/><stop offset=".15" stop-color="#7a2b2b"/><stop offset=".3" stop-color="#4a1515"/><stop offset=".5" stop-color="#8a3333"/><stop offset=".7" stop-color="#4a1515"/><stop offset=".85" stop-color="#7a2b2b"/><stop offset="1" stop-color="#3e1010"/></linearGradient>
 <linearGradient id="rmWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a6146"/><stop offset=".5" stop-color="#5d4029"/><stop offset="1" stop-color="#2c1b11"/></linearGradient>
+<linearGradient id="rmTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3d28"/><stop offset="1" stop-color="#8f6847"/></linearGradient>
 <linearGradient id="rmWain" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a1e"/><stop offset="1" stop-color="#22160e"/></linearGradient>
 <linearGradient id="rmShade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#c58f3f"/><stop offset=".5" stop-color="#ffe6a8"/><stop offset="1" stop-color="#b57d33"/></linearGradient>
 <radialGradient id="rmGlow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd58a" stop-opacity=".55"/><stop offset=".5" stop-color="#ffbf66" stop-opacity=".18"/><stop offset="1" stop-color="#ffbf66" stop-opacity="0"/></radialGradient>
@@ -1314,7 +1559,7 @@ const GRAM_SVG = (() => {
 <path d="M705 300L722 224M727 300L732 222M749 300L744 222" stroke="#8a5a1c" stroke-opacity=".35"/>
 
 <ellipse cx="400" cy="698" rx="330" ry="9" fill="#000" opacity=".45"/>
-<rect x="96" y="590" width="608" height="16" rx="3" fill="url(#rmWood)"/><rect x="96" y="590" width="608" height="1.8" fill="#ffe6b0" opacity=".45"/>
+<path d="M126 452H674L704 590H96Z" fill="url(#rmTop)"/><path d="M126 452H674L704 590H96Z" fill="none" stroke="#ffe6b0" stroke-opacity=".28"/><path d="M140 478H660M128 508H672M114 542H686" stroke="#2c1b11" stroke-opacity=".22" fill="none"/><path d="M126 452H674" stroke="#ffe6b0" stroke-opacity=".35" stroke-width="1.5"/><rect x="96" y="590" width="608" height="16" rx="3" fill="url(#rmWood)"/><rect x="96" y="590" width="608" height="1.8" fill="#ffe6b0" opacity=".45"/>
 <rect x="112" y="606" width="576" height="22" fill="#3a2518"/><rect x="118" y="610" width="564" height="14" fill="none" stroke="#ffe6b0" stroke-opacity=".18"/>
 <circle cx="400" cy="617" r="4" fill="url(#grBs)"/>
 <rect x="124" y="628" width="22" height="62" fill="#3a2518"/><rect x="654" y="628" width="22" height="62" fill="#3a2518"/>
@@ -1322,79 +1567,7 @@ const GRAM_SVG = (() => {
 <rect x="124" y="628" width="22" height="3" fill="#ffe6b0" opacity=".25"/><rect x="654" y="628" width="22" height="3" fill="#ffe6b0" opacity=".25"/>
 </g>
 
-<g transform="translate(80 34)">
-<ellipse cx="320" cy="548" rx="285" ry="9" fill="#000" opacity=".4" aria-hidden="true"/>
-<g aria-hidden="true">
-<ellipse cx="320" cy="112" rx="190" ry="44" fill="url(#grIn)"/>
-<ellipse cx="320" cy="120" rx="64" ry="14" fill="#0b0602" opacity=".75"/>
-<path d="M298 362C298 290 240 240 130 112A190 44 0 0 0 510 112C400 240 342 290 342 362Z" fill="url(#grBr)"/>
-<g fill="none" stroke-linecap="round">
-<path d="M290.2 318Q320 334 349.8 318" stroke="#3c280a" stroke-opacity=".55" stroke-width="2"/><path d="M290.6 321Q320 337 349.4 321" stroke="#fff3c4" stroke-opacity=".3"/>
-<path d="M258.2 262Q320 278 381.8 262" stroke="#3c280a" stroke-opacity=".5" stroke-width="2"/><path d="M258.6 265Q320 281 381.4 265" stroke="#fff3c4" stroke-opacity=".3"/>
-<path d="M217.5 212Q320 228 422.5 212" stroke="#3c280a" stroke-opacity=".45" stroke-width="2"/><path d="M218 215Q320 231 422 215" stroke="#fff3c4" stroke-opacity=".28"/>
-<path d="M177.1 166Q320 182 462.9 166" stroke="#3c280a" stroke-opacity=".4" stroke-width="2"/><path d="M177.6 169Q320 185 462.4 169" stroke="#fff3c4" stroke-opacity=".25"/>
-<path d="M304 348C304 300 262 262 164 138" stroke="#fffbe0" stroke-opacity=".5" stroke-width="3"/>
-<path d="M334 346C334 304 372 270 452 166" stroke="#000" stroke-opacity=".18" stroke-width="3"/>
-<path d="M312 340C312 296 276 258 196 150M326 340C326 296 364 258 440 150" stroke="#3c280a" stroke-opacity=".18" stroke-width="1.5"/>
-</g>
-<ellipse cx="320" cy="112" rx="190" ry="44" fill="none" stroke="url(#grBs)" stroke-width="7"/>
-<ellipse cx="320" cy="112" rx="184" ry="40" fill="none" stroke="#fff" stroke-opacity=".28"/>
-<rect x="288" y="352" width="64" height="16" rx="4" fill="url(#grBr)" stroke="#4a3715"/><rect x="292" y="355" width="56" height="3" rx="1.5" fill="#fff" fill-opacity=".4"/>
-</g>
-<g class="waves" fill="none" stroke="#e6cf8f" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-<path class="wv" d="M262 52Q320 36 378 52"/><path class="wv" d="M236 34Q320 8 404 34"/><path class="wv" d="M210 16Q320-18 430 16"/>
-</g>
-<g aria-hidden="true" fill="#f6e6b0" font-family="Georgia,serif" font-size="26">
-<text class="note" x="196" y="40">♪</text><text class="note" x="440" y="30">♫</text><text class="note" x="330" y="-2">♪</text>
-</g>
-<g aria-hidden="true">
-<path d="M110 368H530L572 458H68Z" fill="url(#grWt)"/>
-<path d="M124 380H516L552 448H88Z" fill="none" stroke="#ffe6b0" stroke-opacity=".16"/>
-<path d="M68 458H572" stroke="#c9a85f" stroke-width="2.5"/>
-<ellipse cx="320" cy="376" rx="70" ry="9" fill="#000" opacity=".3"/>
-<ellipse cx="320" cy="424" rx="164" ry="40" fill="#0b0704"/>
-<ellipse cx="320" cy="418" rx="164" ry="40" fill="#2a1b10" stroke="#a98a4f" stroke-width="2"/>
-<g transform="translate(320 416) scale(1 .24)"><g class="spin">
-<circle r="152" fill="#0f0d0b"/>${gr}
-<path d="M0 0L146.8 39.3A152 152 0 0 1 111.2 103.7Z" fill="#ffe9b8" fill-opacity=".09"/>
-<path d="M0 0L-146.8-39.3A152 152 0 0 1-111.2-103.7Z" fill="#ffe9b8" fill-opacity=".09"/>
-<circle id="grLab" r="52" style="fill:#a33a2a"/><circle r="52" fill="url(#grBs)" opacity=".18"/>
-<circle r="44" fill="none" stroke="#f1e9d7" stroke-opacity=".7" stroke-width="1.2" vector-effect="non-scaling-stroke"/><circle r="30" fill="none" stroke="#f1e9d7" stroke-opacity=".4" stroke-width="1" vector-effect="non-scaling-stroke"/>
-<circle cx="26" cy="0" r="4" fill="#f1e9d7" fill-opacity=".8"/><circle r="6" fill="#f1e9d7"/>
-</g></g>
-<ellipse cx="300" cy="404" rx="96" ry="11" fill="#fff" fill-opacity=".035" transform="rotate(-6 300 404)"/>
-<ellipse cx="320" cy="362" rx="32" ry="8.5" fill="url(#grBs)" stroke="#4a3715" stroke-width="1"/><ellipse cx="320" cy="360" rx="22" ry="5" fill="#2a1a11" opacity=".55"/>
-<ellipse cx="510" cy="394" rx="19" ry="6.5" fill="#000" opacity=".4"/>
-<rect x="504" y="374" width="12" height="20" rx="2" fill="url(#grBr)"/><ellipse cx="510" cy="394" rx="14" ry="5" fill="url(#grBs)"/>
-<g transform="translate(510 374)"><g class="arm">
-<path d="M0 0C-20-10-52-4-66 20" fill="none" stroke="#4a3715" stroke-width="8.5" stroke-linecap="round"/>
-<path d="M0 0C-20-10-52-4-66 20" fill="none" stroke="url(#grBs)" stroke-width="6" stroke-linecap="round"/>
-<path d="M-4-2C-22-11-50-6-62 14" fill="none" stroke="#fff7d6" stroke-opacity=".55" stroke-width="1.2" stroke-linecap="round"/>
-<g transform="translate(-69 25) rotate(35)"><rect x="-12" y="-8" width="24" height="16" rx="6" fill="url(#grBs)" stroke="#4a3715"/><rect x="-7" y="-5" width="10" height="3" rx="1.5" fill="#fff" fill-opacity=".45"/></g>
-<path d="M-72 33L-76 42" stroke="#1a1109" stroke-width="2.2" stroke-linecap="round"/>
-<circle r="7" fill="url(#grBs)" stroke="#4a3715"/><circle r="2.6" fill="#2a1a11"/>
-</g></g>
-<rect x="68" y="458" width="504" height="84" fill="url(#grWf)"/><rect x="68" y="458" width="504" height="84" fill="url(#grSh)"/>
-<rect x="62" y="454" width="516" height="9" rx="2" fill="url(#grWt)" stroke="#ffe6b0" stroke-opacity=".3"/>
-<path d="M68 466H572" stroke="#ffe6b0" stroke-opacity=".35"/>
-<rect x="84" y="468" width="472" height="66" fill="none" stroke="#d6b877" stroke-opacity=".28"/>
-<rect x="98" y="476" width="190" height="52" fill="#1c110a" fill-opacity=".55" stroke="#000" stroke-opacity=".5"/><rect x="100" y="478" width="186" height="48" fill="none" stroke="#ffe6b0" stroke-opacity=".18"/>
-<rect x="352" y="476" width="190" height="52" fill="#1c110a" fill-opacity=".55" stroke="#000" stroke-opacity=".5"/><rect x="354" y="478" width="186" height="48" fill="none" stroke="#ffe6b0" stroke-opacity=".18"/>
-<path d="${slatL}${slatR}" stroke="#d6b877" stroke-opacity=".3" stroke-width="1.4"/>
-<g fill="url(#grBs)" stroke="#4a3715" stroke-width=".6"><circle cx="104" cy="482" r="2.4"/><circle cx="282" cy="482" r="2.4"/><circle cx="104" cy="522" r="2.4"/><circle cx="282" cy="522" r="2.4"/><circle cx="358" cy="482" r="2.4"/><circle cx="536" cy="482" r="2.4"/><circle cx="358" cy="522" r="2.4"/><circle cx="536" cy="522" r="2.4"/></g>
-<rect x="282" y="488" width="76" height="26" rx="2" fill="url(#grBs)" stroke="#4a3715"/><rect x="285" y="491" width="70" height="20" fill="none" stroke="#5d4718" stroke-opacity=".6"/>
-<text x="320" y="505" text-anchor="middle" font-size="8.5" letter-spacing="2" font-weight="700" fill="#2a1a11" font-family="Cormorant Garamond,Iowan Old Style,Georgia,serif">HALCYON</text>
-<circle cx="271" cy="501" r="3.6" fill="url(#grBs)" stroke="#4a3715" stroke-width=".7"/><circle cx="369" cy="501" r="3.6" fill="url(#grBs)" stroke="#4a3715" stroke-width=".7"/>
-<path d="M68 542H572" stroke="#000" stroke-opacity=".55" stroke-width="2"/>
-<rect x="68" y="458" width="12" height="84" fill="url(#grBs)" opacity=".55"/><rect x="560" y="458" width="12" height="84" fill="url(#grBs)" opacity=".55"/>
-<path d="M72 454V548M568 454V548" stroke="#ffe6b0" stroke-opacity=".22"/>
-<rect x="82" y="542" width="34" height="12" fill="#1a100a"/><rect x="524" y="542" width="34" height="12" fill="#1a100a"/>
-<rect x="82" y="542" width="34" height="3" fill="url(#grBs)"/><rect x="524" y="542" width="34" height="3" fill="url(#grBs)"/>
-<path d="M572 500H603" stroke="#4a3715" stroke-width="8" stroke-linecap="round"/><path d="M572 500H603" stroke="url(#grBs)" stroke-width="5.5" stroke-linecap="round"/>
-<path d="M603 500V474" stroke="#4a3715" stroke-width="8" stroke-linecap="round"/><path d="M603 500V474" stroke="url(#grBs)" stroke-width="5.5" stroke-linecap="round"/>
-<circle cx="603" cy="470" r="8.5" fill="url(#grBs)" stroke="#4a3715"/>
-</g>
-</g>
+<g transform="translate(80 27)">${gpBuild()}</g>
 </svg>`;
 })();
 
