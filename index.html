@@ -90,7 +90,9 @@ a{color:inherit}
 .ped{--pw:min(88vw,340px);--sw:82%;--sh:132px;--s1:#5a5551;--s2:#1f1d1b;position:relative;width:var(--pw)}
 .ped.b{--s1:#f2ecde;--s2:#bdb29a;--sw:70%;--sh:150px}
 .ped.c{--s1:#7a5a43;--s2:#2b1b12;--sw:88%;--sh:118px}
-.ped__art{position:relative;z-index:2;width:88%;margin:0 auto -10px}
+.ped__art{position:relative;z-index:2;width:86%;margin:0 auto -10px}
+.ped__art .frame{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 -2px 4px rgba(0,0,0,.55),0 4px 6px rgba(0,0,0,.35)}
+.ped__art .f-black{box-shadow:inset 0 0 0 1px #7a6129,0 4px 6px rgba(0,0,0,.35)}
 .ped__art::after{content:"";position:absolute;left:4%;right:4%;bottom:-7px;height:12px;background:radial-gradient(ellipse,rgba(0,0,0,.55),transparent 70%);z-index:-1}
 .ped .tp{display:block;height:15px;clip-path:polygon(7% 0,93% 0,100% 100%,0 100%);background:linear-gradient(#fff3,#0003),var(--s1)}
 .ped .fr{display:block;height:14px;background:linear-gradient(90deg,#0004,#fff2 20%,#0000 60%,#0005),var(--s1);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 5px 7px rgba(0,0,0,.35)}
@@ -108,8 +110,11 @@ a{color:inherit}
 .paper small{display:block;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#6e5214;margin-bottom:6px}
 .paper h3{margin:0 0 8px;font:600 1.35rem/1.1 var(--serif)}
 .paper p{margin:0;font:italic 1.05rem/1.55 var(--serif);color:#4a4136;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.vit__plane{transition:box-shadow .35s var(--ease)}
+.ex:hover .vit__plane,.ex:focus-visible .vit__plane{box-shadow:0 0 0 2px #d6b877}
+#det .dwrap{animation:rin .35s var(--ease) both}
 .vit__plane::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.2),transparent 35%,transparent 65%,rgba(255,255,255,.1));pointer-events:none}
-.vit__front{position:relative;height:104px;margin:0 2%;background:linear-gradient(90deg,#0006,#fff1 14%,#0000 50%,#0006),linear-gradient(#6a4a35,#2b1b12);box-shadow:inset 0 2px 0 #a98a4f,0 6px 10px rgba(0,0,0,.4)}
+.vit__front{position:relative;height:104px;margin:0;background:linear-gradient(90deg,#0006,#fff1 14%,#0000 50%,#0006),linear-gradient(#6a4a35,#2b1b12);box-shadow:inset 0 2px 0 #a98a4f,0 6px 10px rgba(0,0,0,.4)}
 .vit__legs{display:flex;justify-content:space-between;margin:0 7%;height:22px}
 .vit__legs i{width:16px;background:linear-gradient(90deg,#1a100a,#5a3d2b,#1a100a)}
 .vit::after{content:"";position:absolute;left:-2%;right:-2%;bottom:-8px;height:16px;background:radial-gradient(ellipse,rgba(0,0,0,.6),transparent 70%)}
@@ -602,6 +607,109 @@ body[data-room=entrance]::after{background:radial-gradient(ellipse 100% 80% at 5
 .vpg__l{margin:0;min-width:9.5em;padding:6px 14px;text-align:center;font:600 .95rem/1.2 var(--serif);font-variant:small-caps;letter-spacing:.12em;color:#2a1c0a;background:var(--brass);border:1px solid #5d4718;box-shadow:inset 0 1px 0 #fff8,0 3px 6px rgba(0,0,0,.45)}
 .vcl__in{animation:vflip .4s var(--ease)}
 @keyframes vflip{from{opacity:.25;transform:translateY(6px)}}
+
+
+/* =====================================================================
+   STAGE 1: ARCHITECTURE, SPATIAL DEPTH, PHYSICAL STRUCTURE
+   Everything below is structure only (walls, mouldings, openings, floor
+   plane). Surfaces use the --wal-* / --pla-* / --mld-* tokens so Stage 2
+   (materials) and Stage 3 (light) can restyle without touching geometry.
+   Layer order inside a bay (back to front):
+     plaster wall > .wl recessed panel > wainscot (::after) > .pil pilasters
+     > entablature (::before) > .ex exhibit > .floor plane
+   ===================================================================== */
+:root{
+ /* proportions */
+ --ent-h:58px; --fl-h:80px; --dado-h:104px; --skirt-h:26px; --door-w:136px;
+ /* walnut */
+ --wal-hi:#7a553a; --wal-mid:#4a3122; --wal-lo:#2b1a10; --wal-dk:#150c07;
+ /* aged ivory plaster */
+ --pla-hi:#eadfc4; --pla-mid:#d6c9a9; --pla-lo:#b7a982; --pla-shade:rgba(48,30,12,.34);
+ /* stone / moulding */
+ --mld-hi:#dccfae; --mld-mid:#b4a581; --mld-lo:#7d6e4d; --mld-dk:#2a1c10;
+ --joint:rgba(30,18,8,.4); --edge-hi:rgba(255,246,218,.5);
+}
+
+/* ---------- ROOM SHELL: ceiling, crown cornice, end-wall panel ---------- */
+.room:not(.room--entrance){position:relative;background:linear-gradient(90deg,rgba(24,14,6,.5),transparent 9%,transparent 91%,rgba(24,14,6,.5)),linear-gradient(var(--w1),var(--w2))}
+.rhead{position:relative;isolation:isolate;padding:calc(var(--ent-h) + 30px + env(safe-area-inset-top)) calc(var(--pl) + 18px) 40px}
+.rhead::before{content:"";position:absolute;left:0;right:0;top:0;height:calc(var(--ent-h) + env(safe-area-inset-top));z-index:0;box-shadow:0 12px 18px -8px rgba(30,15,5,.6);
+ background:repeating-linear-gradient(90deg,var(--mld-hi) 0 5px,transparent 5px 9px) 0 calc(22px + env(safe-area-inset-top))/100% 8px no-repeat,
+ linear-gradient(#120b06 0 calc(5px + env(safe-area-inset-top)),#7a6a49 0 calc(6px + env(safe-area-inset-top)),var(--mld-hi) 0 calc(8px + env(safe-area-inset-top)),#a79872 0 calc(11px + env(safe-area-inset-top)),#d9ccaa 0 calc(12px + env(safe-area-inset-top)),var(--mld-mid) 0 calc(20px + env(safe-area-inset-top)),var(--mld-lo) 0 calc(22px + env(safe-area-inset-top)),var(--mld-dk) 0 calc(30px + env(safe-area-inset-top)),#bdae88 0 calc(31px + env(safe-area-inset-top)),#9a8b66 0 calc(34px + env(safe-area-inset-top)),var(--pla-mid) 0 calc(49px + env(safe-area-inset-top)),var(--mld-lo) 0 calc(50px + env(safe-area-inset-top)),var(--mld-dk) 0 100%)}
+/* the title sits in a recessed cartouche panel on the end wall */
+.rhead::after{content:"";position:absolute;z-index:-1;left:var(--pl);right:var(--pl);top:calc(var(--ent-h) + 14px + env(safe-area-inset-top));bottom:14px;
+ border:1px solid var(--joint);background:linear-gradient(rgba(60,40,15,.14),rgba(255,246,218,.1));
+ box-shadow:inset 0 0 0 5px rgba(255,246,218,.14),inset 0 0 0 6px var(--joint),inset 0 3px 14px rgba(40,22,6,.3),0 1px 0 var(--edge-hi)}
+.rhead i{width:150px}
+
+/* ---------- BAY: one wall elevation between two pilasters ---------- */
+body[data-room] .bay:not(.gram__stage){isolation:isolate;overflow:hidden;
+ --pa:color-mix(in srgb,var(--w1) 28%,var(--pla-hi));--pb:color-mix(in srgb,var(--w2) 30%,var(--pla-lo));
+ padding:calc(var(--ent-h) + 26px) calc(var(--pl) + 6px) 0;border-top:0;
+ background:radial-gradient(ellipse 75% 50% at 50% 24%,var(--sp),transparent 72%),
+  linear-gradient(90deg,var(--pla-shade),transparent calc(var(--pl) + 34px),transparent calc(100% - var(--pl) - 34px),var(--pla-shade)),
+  linear-gradient(rgba(30,18,8,.3),transparent 110px,transparent calc(100% - 230px),rgba(30,18,8,.22)),
+  repeating-linear-gradient(0deg,rgba(80,60,30,.05) 0 1px,transparent 1px 38px),
+  linear-gradient(var(--pa),var(--pb))}
+/* entablature: cove, crown, dentils, bed mould, frieze, architrave */
+.bay::before{inset:auto;left:0;right:0;top:0;height:var(--ent-h);z-index:2;box-shadow:0 12px 16px -7px rgba(30,15,5,.6);
+ background:repeating-linear-gradient(90deg,var(--mld-hi) 0 5px,transparent 5px 9px) 0 22px/100% 8px no-repeat,
+ linear-gradient(#120b06 0 5px,#7a6a49 0 6px,var(--mld-hi) 0 8px,#a79872 0 11px,#d9ccaa 0 12px,var(--mld-mid) 0 20px,var(--mld-lo) 0 22px,var(--mld-dk) 0 30px,#bdae88 0 31px,#9a8b66 0 34px,var(--mld-hi) 0 35px,var(--pa) 0 49px,#b3a47f 0 50px,var(--mld-lo) 0 54px,var(--mld-hi) 0 55px,var(--mld-lo) 0 100%)}
+.bay.gram__stage{padding-top:calc(var(--ent-h) + 22px)}
+.gram__stage::before{display:block}
+/* wainscot: chair rail, raised walnut panels between stiles, skirting board */
+.bay::after{left:0;right:0;bottom:var(--fl-h);height:var(--dado-h);z-index:0;
+ background:linear-gradient(var(--edge-hi) 0 1px,var(--wal-hi) 1px 3px,var(--wal-mid) 3px 7px,var(--wal-dk) 7px 8px,transparent 8px calc(100% - var(--skirt-h)),#8a6a4a calc(100% - var(--skirt-h)) calc(100% - var(--skirt-h) + 2px),var(--wal-mid) 0 calc(100% - var(--skirt-h) + 6px),#33200f 0 calc(100% - 3px),var(--wal-dk) 0 100%),
+ linear-gradient(transparent 0 14px,rgba(0,0,0,.4) 14px 15px,transparent 15px calc(100% - var(--skirt-h) - 9px),rgba(255,236,190,.14) calc(100% - var(--skirt-h) - 9px) calc(100% - var(--skirt-h) - 8px),rgba(0,0,0,.4) 0 calc(100% - var(--skirt-h) - 7px),transparent 0),
+ repeating-linear-gradient(90deg,var(--wal-lo) 0 calc(var(--pl) + 8px),var(--wal-hi) 0 calc(var(--pl) + 9px),var(--wal-mid) 0 calc(var(--pl) + 24px),#2c1a0f 0 calc(var(--pl) + 25px),var(--wal-lo) 0 calc(var(--pl) + 38px),transparent 0 calc(var(--pl) + 150px)),
+ linear-gradient(color-mix(in srgb,var(--dado,#4a2f20) 16%,var(--wal-mid)),var(--wal-lo));
+ box-shadow:0 -4px 6px -3px rgba(20,10,4,.3)}
+body[data-room=gramophone] .bay::after{display:none}
+/* recessed wall panel behind each exhibit, three slightly different forms */
+.wl{position:absolute;z-index:0;left:calc(var(--pl) + 12px);right:calc(var(--pl) + 12px);top:calc(var(--ent-h) + 14px);bottom:calc(var(--fl-h) + var(--dado-h) + 10px);pointer-events:none;
+ border:1px solid var(--joint);background:linear-gradient(var(--mld-hi),var(--mld-lo));box-shadow:0 1px 0 var(--edge-hi),0 -1px 3px rgba(40,22,6,.4);opacity:.9}
+.wl::before{content:"";position:absolute;inset:7px;background:linear-gradient(color-mix(in srgb,var(--pa) 88%,#fff),color-mix(in srgb,var(--pb) 92%,#000));box-shadow:inset 0 6px 14px rgba(40,22,6,.38),inset 4px 0 8px rgba(40,22,6,.2),inset -4px 0 8px rgba(40,22,6,.14),0 0 0 1px var(--joint)}
+.wl::after{content:"";position:absolute;inset:15px;border:1px solid rgba(90,66,30,.4);box-shadow:inset 0 0 0 3px rgba(255,246,218,.1)}
+.bay.v1 .wl{left:calc(var(--pl) + 20px);right:calc(var(--pl) + 6px);clip-path:polygon(0 12px,12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px))}
+.bay.v2 .wl{left:calc(var(--pl) + 8px);right:calc(var(--pl) + 18px);border-radius:0}
+/* sculpture and case bays get a deep arched alcove instead of a flat panel */
+.bay:has(.ped) .wl,.bay:has(.vit) .wl{left:calc(var(--pl) + 24px);right:calc(var(--pl) + 24px);border-radius:999px 999px 0 0;clip-path:none}
+.bay:has(.ped) .wl::before,.bay:has(.vit) .wl::before{border-radius:999px 999px 0 0;background:radial-gradient(ellipse 60% 55% at 50% 30%,rgba(255,226,170,.22),transparent 70%),linear-gradient(var(--wal-mid),var(--wal-dk));box-shadow:inset 0 14px 26px rgba(0,0,0,.75),inset 10px 0 14px rgba(0,0,0,.55),inset -10px 0 14px rgba(0,0,0,.45)}
+.bay:has(.ped) .wl::after,.bay:has(.vit) .wl::after{border-radius:999px 999px 0 0;border-color:rgba(214,184,119,.35)}
+/* pilasters: fluted shaft, abacus + echinus capital, moulded plinth */
+.pil{top:calc(var(--ent-h) - 2px);bottom:var(--fl-h);z-index:1;
+ background:repeating-linear-gradient(90deg,rgba(0,0,0,.24) 0 2px,rgba(255,255,255,.1) 2px 4px,transparent 4px 8px),linear-gradient(90deg,rgba(0,0,0,.45),rgba(255,255,255,.16) 38%,rgba(0,0,0,.2) 70%,rgba(0,0,0,.5)),linear-gradient(var(--mld-mid),var(--mld-hi) 20%,var(--mld-mid))}
+.pil::before{top:0;bottom:auto;left:-14%;right:-14%;height:22px;background:linear-gradient(var(--mld-hi) 0 6px,var(--mld-mid) 0 10px,var(--mld-lo) 0 12px,var(--mld-hi) 0 15px,var(--mld-lo) 0 100%);box-shadow:0 4px 6px rgba(20,10,4,.5)}
+.pil::after{bottom:0;top:auto;left:-14%;right:-14%;height:calc(var(--skirt-h) + 10px);background:linear-gradient(var(--mld-hi) 0 3px,var(--mld-mid) 0 8px,var(--mld-lo) 0 12px,var(--mld-mid) 0 calc(100% - 4px),var(--mld-dk) 0 100%);box-shadow:0 -3px 6px rgba(20,10,4,.4)}
+/* floor: a real receding plane, boards converge on the far wall */
+.floor{height:var(--fl-h);margin-top:-16px;overflow:hidden;background:linear-gradient(var(--wal-dk),var(--wal-mid));box-shadow:inset 0 14px 16px -10px rgba(0,0,0,.6),0 -1px 0 var(--mld-dk)}
+.floor::before{content:"";position:absolute;left:-90%;right:-90%;bottom:0;height:520px;transform-origin:50% 100%;transform:perspective(260px) rotateX(74deg);
+ background:repeating-linear-gradient(0deg,rgba(0,0,0,.4) 0 1px,transparent 1px 44px),repeating-linear-gradient(90deg,rgba(0,0,0,.34) 0 2px,rgba(255,226,170,.08) 2px 4px,transparent 4px 42px),linear-gradient(#5a3d2b,#2b1a10)}
+.floor::after{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.5),transparent calc(var(--skirt-h) - 14px)),radial-gradient(ellipse 50% 100% at 50% 0,rgba(255,226,170,.12),transparent 70%)}
+/* room threshold: brass saddle where one bay meets the next */
+.bay+.bay{margin-top:0}
+.bay .floor{border-bottom:3px solid var(--mld-dk);box-shadow:inset 0 14px 16px -10px rgba(0,0,0,.6),0 3px 0 #8c7236}
+/* ---------- END OF ROOM: panelled wall with an arched doorway to the next gallery ---------- */
+.rfoot{position:relative;gap:10px;padding:46px 16px 54px;border-top:0;
+ background:linear-gradient(rgba(20,10,4,.55),transparent 60px),repeating-linear-gradient(90deg,var(--wal-lo) 0 calc(var(--pl) + 8px),var(--wal-mid) 0 calc(var(--pl) + 30px),#2c1a0f 0 calc(var(--pl) + 31px),transparent 0 calc(var(--pl) + 150px)),linear-gradient(var(--wal-mid),var(--wal-dk));
+ box-shadow:inset 0 10px 14px -8px rgba(0,0,0,.7),inset 0 3px 0 #8c7236}
+.rfoot::before{content:"";order:-1;width:var(--door-w);height:178px;margin:0 auto 26px;border-radius:999px 999px 0 0;
+ background:linear-gradient(90deg,rgba(0,0,0,.6),transparent 28%,transparent 72%,rgba(0,0,0,.6)),radial-gradient(ellipse 70% 80% at 50% 52%,#ffe2a8,#b87a38 40%,#2a170a 75%),linear-gradient(#000,#000);
+ box-shadow:0 0 0 5px var(--wal-hi),0 0 0 6px var(--wal-dk),0 0 0 14px var(--wal-mid),0 0 0 15px #8c7236,0 0 0 24px var(--wal-lo),0 0 40px 18px rgba(255,190,110,.18),inset 0 18px 22px rgba(0,0,0,.7),inset 0 -26px 0 -8px #4a2f1c}
+.rfoot>*{position:relative}
+/* ---------- ENTRANCE FACADE: rusticated stone, quoins, fanlight, arch surround ---------- */
+.fa::before{background:repeating-linear-gradient(0deg,var(--joint) 0 1px,transparent 1px 22px),repeating-linear-gradient(90deg,transparent 0 40px,var(--joint) 40px 41px) 0 0/100% 22px,linear-gradient(90deg,rgba(0,0,0,.3),transparent 20%,transparent 80%,rgba(0,0,0,.3)),linear-gradient(#a99f88,#7f765f);box-shadow:inset 0 10px 14px -6px rgba(0,0,0,.5)}
+.fa::after{content:"";position:absolute;left:23%;right:23%;top:23.5%;height:8.5%;background:linear-gradient(#d6ccb4,#8a806a);border-radius:999px 999px 0 0;box-shadow:0 3px 6px rgba(0,0,0,.5)}
+.fa__po{box-shadow:0 0 0 4px #7a6129,0 0 0 6px #3b2d0f,0 0 0 13px #b3a88f,0 0 0 14px #6f6653,0 0 0 20px #8f8670,0 0 50px 6px rgba(255,190,110,.35)}
+.fa__pl{background:repeating-linear-gradient(90deg,rgba(0,0,0,.2) 0 2px,rgba(255,255,255,.14) 2px 5px,transparent 5px 9px),linear-gradient(90deg,#7c735d,#e4dac3 40%,#8a816b)}
+.fa__st{box-shadow:0 7px 0 -1px #5b5242,0 14px 0 -3px #463e32,0 22px 0 -6px #342e25,0 30px 24px -8px rgba(0,0,0,.6)}
+.fa::after{z-index:0}.fa__kn,.fa__sc{z-index:1}
+.hall{position:relative;z-index:1}
+.room--entrance{position:relative;overflow:hidden}
+.room--entrance::before{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;pointer-events:none;background:repeating-linear-gradient(90deg,rgba(0,0,0,.35) 0 1px,transparent 1px 30px),linear-gradient(transparent,rgba(0,0,0,.55)),linear-gradient(#2a241d,#14110d)}
+/* ---------- mobile + motion ---------- */
+@media (max-width:420px){:root{--ent-h:52px;--fl-h:68px;--dado-h:92px;--door-w:112px}.rfoot::before{height:150px}}
+@media (min-width:760px){:root{--ent-h:64px;--fl-h:96px;--dado-h:116px;--skirt-h:30px}.bay.v1 .wl{left:calc(var(--pl) + 40px)}}
 
 </style>
 </head>
@@ -1124,7 +1232,7 @@ function exhibit(ex,list,i,wing){
   const inner=k==="ped"?pedestal(ex,i):k==="vit"?vitrine(ex):
     [h("span",{class:"hang"+(ex.size==="l"||ex.featured?" l":"")},h("i",{class:"plight"}),framed(ex)),plaque(ex)];
   const btn=h("button",{type:"button",class:"ex","aria-label":"Approach exhibit "+ex.number+": "+ex.title,onclick:()=>openDetail(ex,list)},inner);
-  return h("article",{class:"bay","data-id":ex.id},h("i",{class:"pil l","aria-hidden":"true"}),h("i",{class:"pil r","aria-hidden":"true"}),h("i",{class:"track","aria-hidden":"true"}),h("i",{class:"cone","aria-hidden":"true"}),wing?h("a",{class:"wing",href:"#"+wing.id,"aria-label":"Visit Gallery "+wing.numeral+", "+wing.title+", to see the full collection"},h("small",{text:"From Gallery "+wing.numeral}),h("b",{text:wing.nav}),h("span",{class:"wing__go",text:"Enter the gallery"})):null,btn,h("div",{class:"floor","aria-hidden":"true"}));
+  return h("article",{class:"bay v"+(i%3),"data-id":ex.id},h("i",{class:"wl","aria-hidden":"true"}),h("i",{class:"pil l","aria-hidden":"true"}),h("i",{class:"pil r","aria-hidden":"true"}),h("i",{class:"track","aria-hidden":"true"}),h("i",{class:"cone","aria-hidden":"true"}),wing?h("a",{class:"wing",href:"#"+wing.id,"aria-label":"Visit Gallery "+wing.numeral+", "+wing.title+", to see the full collection"},h("small",{text:"From Gallery "+wing.numeral}),h("b",{text:wing.nav}),h("span",{class:"wing__go",text:"Enter the gallery"})):null,btn,h("div",{class:"floor","aria-hidden":"true"}));
 }
 
 /* ---- rooms ---- */
@@ -1132,8 +1240,8 @@ const app=$("app"),roomEls={};
 let opening=false;
 function enterHall(e){
   gramBegin();
-  if(reduce.matches||opening)return;
-  e.preventDefault();opening=true;
+  if(reduce.matches)return;
+  e.preventDefault();if(opening)return;opening=true;
   const rm=$("room-entrance");rm.classList.add("opening");
   setTimeout(()=>{opening=false;location.hash="main"},950);
 }
@@ -1818,9 +1926,9 @@ function show(id){
 }
 function route(){
   const id=(location.hash||"#entrance").slice(1),t=roomEls[id]?id:"entrance";
-  closeDir(true);if(t===active)return;
+  closeDir(true);if(busy)return;if(t===active)return;
   if(reduce.matches){show(t);return}
-  busy=true;dim.classList.add("on");setTimeout(()=>{show(t);dim.classList.remove("on");busy=false},300);
+  busy=true;dim.classList.add("on");setTimeout(()=>{const n=(location.hash||"#entrance").slice(1);show(roomEls[n]?n:"entrance");dim.classList.remove("on");busy=false},300);
 }
 addEventListener("hashchange",route);
 $("b-ent").onclick=()=>{location.hash="#entrance"};$("b-arc").onclick=()=>{location.hash="#archive"};
@@ -1860,7 +1968,9 @@ function fill(ex){
 }
 function openDetail(ex,l){list=l&&l.length?l:EX;ix=list.findIndex(e=>e.id===ex.id);if(ix<0){list=[ex];ix=0}
   fill(ex);openSheet(det,$("det-t"));history.pushState({d:1},"");pushed=true}
-function closeDetail(fromPop){if(!det.classList.contains("open"))return;closeSheet(det,true);if(pushed&&!fromPop){pushed=false;history.back()}pushed=false}
+function closeDetail(fromPop){if(!det.classList.contains("open"))return;const shown=det.classList.contains("show"),cur=list[ix];closeSheet(det,true);
+  if(shown&&cur){const b=[...document.querySelectorAll(".room.on .bay")].find(x=>x.dataset.id===cur.id);if(b&&!b.contains(opener)){const e=b.querySelector(".ex");if(e)e.focus({preventScroll:true});b.scrollIntoView({block:"center",behavior:reduce.matches?"auto":"smooth"})}}
+if(pushed&&!fromPop){pushed=false;history.back()}pushed=false}
 function step(n){const j=ix+n;if(j<0||j>=list.length)return;ix=j;fill(list[j]);$("det-t").focus({preventScroll:true})}
 $("d-x").onclick=()=>closeDetail();$("d-prev").onclick=()=>step(-1);$("d-next").onclick=()=>step(1);
 addEventListener("popstate",()=>{if(lb.classList.contains("open"))closeLb();if(det.classList.contains("open"))closeDetail(true)});
